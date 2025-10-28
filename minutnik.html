@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Minutnik wizualny – pasek postępu</title>
+<style>
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
+  h1 { font-size: 1.4rem; margin-bottom: 12px; }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  button, select { padding: 10px 14px; font-size: 1rem; }
+  .bar-wrap { width: 100%; height: 40px; border: 2px solid #333; border-radius: 10px; overflow: hidden; }
+  .bar { height: 100%; width: 0%; background: linear-gradient(90deg, #77a, #7cf); transition: width 0.2s linear; }
+  .time { margin-top: 10px; font-size: 1.2rem; }
+  .hint { margin-top: 6px; color: #555; font-size: .95rem; }
+</style>
+</head>
+<body>
+  <h1>Minutnik wizualny</h1>
+  <div class="controls">
+    <label for="preset">Czas:</label>
+    <select id="preset">
+      <option value="180">3 min</option>
+      <option value="300">5 min</option>
+      <option value="600">10 min</option>
+      <option value="900">15 min</option>
+      <option value="1200">20 min</option>
+    </select>
+    <button id="start">Start</button>
+    <button id="pause">Pauza</button>
+    <button id="reset">Reset</button>
+  </div>
+
+  <div class="bar-wrap"><div class="bar" id="bar"></div></div>
+  <div class="time" id="time">00:00</div>
+  <div class="hint">Podpowiedź: włącz pełny ekran (F11) i pokaż minutnik na projektorze / monitorze.</div>
+
+<script>
+  let total = 300; // default 5 min
+  let left = total;
+  let running = false;
+  let last = null;
+  const bar = document.getElementById('bar');
+  const timeEl = document.getElementById('time');
+  const preset = document.getElementById('preset');
+  const startBtn = document.getElementById('start');
+  const pauseBtn = document.getElementById('pause');
+  const resetBtn = document.getElementById('reset');
+
+  function fmt(sec) {
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  function render() {
+    const prog = 100 * (total - left) / total;
+    bar.style.width = Math.max(0, Math.min(100, prog)) + '%';
+    timeEl.textContent = fmt(left);
+  }
+
+  function tick(ts) {
+    if (!running) return;
+    if (last === null) last = ts;
+    const dt = (ts - last) / 1000.0;
+    last = ts;
+    left -= dt;
+    if (left <= 0) {
+      left = 0;
+      running = false;
+      render();
+      // prosty sygnał: miganie paska
+      let flashes = 0;
+      const id = setInterval(() => {
+        bar.style.visibility = (bar.style.visibility === 'hidden') ? 'visible' : 'hidden';
+        flashes += 1;
+        if (flashes > 10) { clearInterval(id); bar.style.visibility = 'visible'; }
+      }, 200);
+      alert('Koniec czasu!');
+      return;
+    }
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  startBtn.addEventListener('click', () => {
+    if (running) return;
+    running = true;
+    last = null;
+    requestAnimationFrame(tick);
+  });
+
+  pauseBtn.addEventListener('click', () => {
+    running = false;
+    last = null;
+  });
+
+  resetBtn.addEventListener('click', () => {
+    running = false;
+    last = null;
+    left = total;
+    render();
+  });
+
+  preset.addEventListener('change', () => {
+    total = Number(preset.value);
+    left = total;
+    render();
+  });
+
+  // init
+  total = Number(preset.value);
+  left = total;
+  render();
+</script>
+</body>
+</html>
